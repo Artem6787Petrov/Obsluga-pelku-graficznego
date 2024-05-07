@@ -1,0 +1,93 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+
+struct Color {
+    int r;
+    int g;
+    int b;
+
+    bool operator==(const Color& other) const {
+        return r == other.r && g == other.g && b == other.b;
+    }
+};
+
+namespace std {
+    template<> struct hash<Color> {
+        size_t operator()(const Color& color) const {
+            return hash<int>()(color.r) ^ hash<int>()(color.g) ^ hash<int>()(color.b);
+        }
+    };
+}
+
+std::string to_string(const Color& color) {
+    return std::to_string(color.r) + "-" + std::to_string(color.g) + "-" + std::to_string(color.b);
+}
+
+int main() {
+    std::string filename;
+    char choice;
+    do {
+        // Ask for filename
+        std::cout << "Podaj nazwe pliku: ";
+        std::cin >> filename;
+
+        std::ifstream file(filename);
+        if (!file) {
+            std::cerr << "Nie udalo sie otworzyc pliku." << std::endl;
+            return 1;
+        }
+
+        std::string format;
+        int width, height, maxColorValue;
+        file >> format >> width >> height >> maxColorValue;
+
+        if (format != "P3" && format != "P6" && format != "P2" && format != "P5") {
+            std::cerr << "Nieobsługiwany format pliku." << std::endl;
+            return 1;
+        }
+
+        // Read image data
+        std::vector<Color> pixels;
+        if (format == "P3" || format == "P6") {
+            int r, g, b;
+            while (file >> r >> g >> b) {
+                pixels.push_back({r, g, b});
+            }
+        } else if (format == "P2" || format == "P5") {
+            int gray;
+            while (file >> gray) {
+                pixels.push_back({gray, gray, gray});
+            }
+        }
+
+        // Calculate information about the image
+        std::unordered_map<Color, int> colorCount;
+        for (const auto& pixel : pixels) {
+            colorCount[pixel]++;
+        }
+
+        Color mostFrequentColor;
+        int maxCount = 0;
+        for (const auto& pair : colorCount) {
+            if (pair.second > maxCount) {
+                mostFrequentColor = pair.first;
+                maxCount = pair.second;
+            }
+        }
+
+        std::cout << "\nSzerokosc obrazu: " << width << std::endl;
+        std::cout << "Wysokosco brazu: " << height << std::endl;
+        std::cout << "Najczęściej wystepujacy kolor to " << to_string(mostFrequentColor) << " i wystapił " << maxCount << " razy" << std::endl;
+        std::cout << "Liczba unikalnych kolorow: " << colorCount.size() << std::endl;
+
+        // Ask if the user wants to process another file
+        std::cout << "\nCzy chcesz podac kolejny plik? (tak/nie): ";
+        std::cin >> choice;
+
+    } while (choice == 't' || choice == 'T');
+
+    return 0;
+}
